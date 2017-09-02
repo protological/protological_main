@@ -35,6 +35,22 @@ void pbuf(uint8_t * buf, uint8_t size)
     return;
 }
 
+uint8_t hextodec(char c)
+{
+    if(c>='0' && c<='9') return c-'0';
+    if(c>='A'&& c<='F') return ((c-'A')+10);
+    if(c>='a'&& c<='f') return ((c-'a')+10);
+    return 0;
+}
+
+bool ishexdigit(char c)
+{
+    if(c>='0' && c<='9') return true;
+    if(c>='A'&& c<='F') return true;
+    if(c>='a'&& c<='f') return true;
+    return false;
+}
+
 
 // *******************************************************************************
 // Serial functions

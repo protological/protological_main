@@ -28,16 +28,25 @@
 extern char m_printbuffer[];
 extern char m_rx_buffer[];
 
-#define toggle(P)   do{if(digitalRead(P)){ digitalWrite((P),LOW); }else{ digitalWrite((P),HIGH);}}while(0)
-
 #define cmp(S,B)    (strncmp((B),(S),sizeof(S)-1)==0)
 
-
+// Utility functions
+//////////////////////////////////
 void pbuf(uint8_t * buf, uint8_t size);
+
+uint8_t hextodec(char c);
+
+bool ishexdigit(char c);
+
+// Serial functions
+//////////////////////////////////
 
 void serial_flush();
 
 uint32_t serial_getnumber(char * msg);
+
+// Timer functions
+//////////////////////////////////
 
 void timer1_setup(float _clockTimeMS);
 

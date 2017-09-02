@@ -23,6 +23,9 @@
 #include "FLASHSPI.h"
 #include "RTCM41.h"
 
+// Definitions
+//////////////////////////////////////////////////////////////
+
 #define FIRMWARE_VERSION    "1.0"
 
 #define TIMER_PERIOD_MS     100
@@ -32,6 +35,9 @@
 #define MAX_RX_SIZE         50
 #define MAX_READ_SIZE       32
 #define MAX_SEND_SIZE       32
+
+// Variables
+//////////////////////////////////////////////////////////////
 
 char m_rx_buffer[MAX_RX_SIZE];
 uint8_t m_rx_buffer_index=0;
@@ -54,6 +60,8 @@ struct spidata{
     uint32_t speed;
 }spidata_s;
 
+// Functions
+//////////////////////////////////////////////////////////////
 
 void setup()
 {
@@ -65,8 +73,8 @@ void setup()
 
     pinMode(LED_PIN,OUTPUT);
 
-    timer1_setup(TIMER_PERIOD_MS);
-    timer1_start();
+    //timer1_setup(TIMER_PERIOD_MS);
+    //timer1_start();
 
     spidata_s.mode=0;
     spidata_s.sspin=10;
@@ -77,8 +85,7 @@ void setup()
 
     Serial.begin(57600);
 
-    info();
-    help_menu();
+    //help_menu();
     Serial.write(">");
 
     return;
@@ -119,95 +126,36 @@ bool rx()
 }
 void process(char * cmd)
 {
-#if 0
-    sprintf(m_printbuffer,"Got: '%s'\n",m_rx_buffer);
-    Serial.write(m_printbuffer);
-#endif
+
     Serial.write(m_rx_buffer);
     Serial.write('\n');
+
     if(cmp("show",cmd)){
-        show_settings();
-#if 0
-    }else if(cmp("test",cmd)){
-        uint32_t v;
-        Serial.write("Running test\n");
-        v = serial_getnumber("Enter number: ");
-        Serial.write("Number was ");
-        Serial.println(v,DEC);
-#endif
+        cmd_show_settings();
     }else if(cmp("read",cmd)){
-        uint8_t bytes=0;
-        //Serial.write("Read\n");
-        bytes = serial_getnumber("Bytes to read: ");
-        Serial.write('\n');
-        if(bytes>MAX_READ_SIZE) bytes=MAX_READ_SIZE;
-        switch(spidata_s.protocol){
-        case 0:
-            spi_general.settings(spidata_s.speed, spidata_s.mode, spidata_s.sspin);
-            bytes = spi_general.read(bytes,m_read_buffer);
-            break;
-        case 1:
-            spi_flash.settings(spidata_s.speed, spidata_s.mode, spidata_s.sspin);
-            bytes = spi_flash.read(bytes,m_read_buffer);
-            break;
-        case 2:
-            spi_rtc.settings(spidata_s.speed, spidata_s.mode, spidata_s.sspin);
-            bytes = spi_rtc.read(bytes,m_read_buffer);
-            break;
-        }
-        if(bytes)
-            pbuf(m_read_buffer,bytes);
-
+        cmd_read();
     }else if(cmp("speed",cmd)){
-        set_speed();
-
+        cmd_set_speed();
     }else if(cmp("write",cmd)){
-        uint8_t bytes=0;
-        bytes = serial_getnumber("Bytes to write: ");
-        Serial.write('\n');
-        switch(spidata_s.protocol){
-        case 0:
-            spi_general.settings(spidata_s.speed, spidata_s.mode, spidata_s.sspin);
-            bytes = spi_general.write(bytes,m_write_buffer);
-            break;
-        case 1:
-            spi_flash.settings(spidata_s.speed, spidata_s.mode, spidata_s.sspin);
-            bytes = spi_flash.write(bytes,m_write_buffer);
-            break;
-        case 2:
-            spi_rtc.settings(spidata_s.speed, spidata_s.mode, spidata_s.sspin);
-            bytes = spi_rtc.write(bytes,m_write_buffer);
-            break;
-        }
-
+        cmd_write();
     }else if(cmp("proto",cmd)){
-        select_protocol();
-
+        cmd_select_protocol();
     }else if(cmp("mode",cmd)){
-        select_mode();
+        cmd_select_mode();
     }else if(cmp("ss",cmd)){
-        select_sspin();
-
+        cmd_select_sspin();
     }else if(cmp("fill",cmd)){
-        fill();
+        cmd_fill();
     }else if(cmp("dump",cmd)){
-        dump();
-
-// Help and default
+        cmd_dump_writemem();
     }else if(cmp("help",cmd)){
         help_menu();
     }else{
         bool result;
         switch(spidata_s.protocol){
-        case 0:
-            result =spi_general.cmd(cmd);
-            break;
-        case 1:
-            result =spi_flash.cmd(cmd);
-            break;
-        case 2:
-            result =spi_rtc.cmd(cmd);
-            break;
+        case 0: result =spi_general.cmd(cmd); break;
+        case 1: result =spi_flash.cmd(cmd); break;
+        case 2: result =spi_rtc.cmd(cmd); break;
         }
         if(!result){
             sprintf(m_printbuffer,"Unknown '%s'\n",cmd);
@@ -218,26 +166,6 @@ void process(char * cmd)
     return;
 }
 
-void info()
-{
-#if 0
-    sprintf(m_printbuffer,"sizeof(char) = %d\n",sizeof(char));
-    Serial.write(m_printbuffer);
-    sprintf(m_printbuffer,"sizeof(int) = %d\n",sizeof(int));
-    Serial.write(m_printbuffer);
-    sprintf(m_printbuffer,"sizeof(u int) = %d\n",sizeof(unsigned int));
-    Serial.write(m_printbuffer);
-    sprintf(m_printbuffer,"sizeof(u l i) = %d\n",sizeof(unsigned long int));
-    Serial.write(m_printbuffer);
-    sprintf(m_printbuffer,"sizeof(uint8_t) = %d\n",sizeof(uint8_t));
-    Serial.write(m_printbuffer);
-    sprintf(m_printbuffer,"sizeof(uint16_t) = %d\n",sizeof(uint16_t));
-    Serial.write(m_printbuffer);
-    sprintf(m_printbuffer,"sizeof(uint32_t) = %d\n",sizeof(uint32_t));
-    Serial.write(m_printbuffer);
-#endif
-    return;
-}
 void help_menu()
 {
     sprintf(m_printbuffer,"\n\nSPI Analyzer v%s %s\n",FIRMWARE_VERSION,__DATE__);
@@ -269,7 +197,55 @@ void help_menu()
     return;
 }
 
-void show_settings()
+// Command functions
+///////////////////////////////////////////////////
+void cmd_write()
+{
+    uint8_t bytes=0;
+    bytes = serial_getnumber("Bytes to write: ");
+    Serial.write('\n');
+    switch(spidata_s.protocol){
+    case 0:
+        spi_general.settings(spidata_s.speed, spidata_s.mode, spidata_s.sspin);
+        bytes = spi_general.write(bytes,m_write_buffer);
+        break;
+    case 1:
+        spi_flash.settings(spidata_s.speed, spidata_s.mode, spidata_s.sspin);
+        bytes = spi_flash.write(bytes,m_write_buffer);
+        break;
+    case 2:
+        spi_rtc.settings(spidata_s.speed, spidata_s.mode, spidata_s.sspin);
+        bytes = spi_rtc.write(bytes,m_write_buffer);
+        break;
+    }
+    return;
+}
+void cmd_read()
+{
+    uint8_t bytes=0;
+    //Serial.write("Read\n");
+    bytes = serial_getnumber("Bytes to read: ");
+    Serial.write('\n');
+    if(bytes>MAX_READ_SIZE) bytes=MAX_READ_SIZE;
+    switch(spidata_s.protocol){
+    case 0:
+        spi_general.settings(spidata_s.speed, spidata_s.mode, spidata_s.sspin);
+        bytes = spi_general.read(bytes,m_read_buffer);
+        break;
+    case 1:
+        spi_flash.settings(spidata_s.speed, spidata_s.mode, spidata_s.sspin);
+        bytes = spi_flash.read(bytes,m_read_buffer);
+        break;
+    case 2:
+        spi_rtc.settings(spidata_s.speed, spidata_s.mode, spidata_s.sspin);
+        bytes = spi_rtc.read(bytes,m_read_buffer);
+        break;
+    }
+    if(bytes)
+        pbuf(m_read_buffer,bytes);
+    return;
+}
+void cmd_show_settings()
 {
     sprintf(m_printbuffer,"Mode: %d\n",spidata_s.mode);
     Serial.write(m_printbuffer);
@@ -281,7 +257,7 @@ void show_settings()
     Serial.write(m_printbuffer);
 }
 
-void select_protocol()
+void cmd_select_protocol()
 {
     uint8_t v;
     Serial.write("\nSelect Protocol\n");
@@ -295,7 +271,7 @@ void select_protocol()
     spidata_s.protocol = v;
     return;
 }
-void select_mode()
+void cmd_select_mode()
 {
     uint8_t v;
     Serial.write("\nSelect Mode\n");
@@ -310,7 +286,7 @@ void select_mode()
     spidata_s.mode = v;
     return;
 }
-void select_sspin()
+void cmd_select_sspin()
 {
     uint8_t v;
     sprintf(m_printbuffer,"\nSS Pin is: %d\n",spidata_s.sspin);
@@ -322,7 +298,7 @@ void select_sspin()
     spidata_s.sspin = v;
     return;
 }
-void set_speed()
+void cmd_set_speed()
 {
     uint32_t v;
     sprintf(m_printbuffer,"\nCurrent speed: %d\n",spidata_s.speed);
@@ -338,7 +314,7 @@ void set_speed()
     return;
 }
 
-void fill()
+void cmd_fill()
 {
     bool abort=false;
     uint8_t count=0;
@@ -353,10 +329,8 @@ void fill()
         abort=false;
         do{
            c = Serial.read();
-           if(c>-1)
-           {
-               if(!ishexdigit(c))
-               {
+           if(c>-1){
+               if(!ishexdigit(c)){
                    v=0;
                    abort=true;
                    break;
@@ -387,7 +361,7 @@ void fill()
 
     return;
 }
-void dump()
+void cmd_dump_writemem()
 {
     uint8_t x;
     for(x=0;x<MAX_SEND_SIZE;x+=8)
@@ -400,18 +374,4 @@ void dump()
     return;
 }
 
-uint8_t hextodec(char c)
-{
-    if(c>='0' && c<='9') return c-'0';
-    if(c>='A'&& c<='F') return ((c-'A')+10);
-    if(c>='a'&& c<='f') return ((c-'a')+10);
-    return 0;
-}
-bool ishexdigit(char c)
-{
-    if(c>='0' && c<='9') return true;
-    if(c>='A'&& c<='F') return true;
-    if(c>='a'&& c<='f') return true;
-    return false;
-}
 // eof
