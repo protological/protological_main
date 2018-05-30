@@ -12,8 +12,6 @@
 #include <wolfssl/ssl.h>
 
 
-
-// Keep the LED on for 2/3 of a second.
 #define BLINK_ON_TICKS  (TIMER_FREQUENCY_HZ * 2 / 4)
 #define BLINK_OFF_TICKS (TIMER_FREQUENCY_HZ - BLINK_ON_TICKS)
 
@@ -59,6 +57,17 @@ int main()
     // At this stage the system clock should have already been configured
     // at high speed.
     trace_printf("System clock: %u Hz\n", SystemCoreClock);
+
+    TIM_TimeBaseInitTypeDef timerInitStructure;
+    timerInitStructure.TIM_Prescaler = 40000;
+    timerInitStructure.TIM_CounterMode = TIM_CounterMode_Up;
+    timerInitStructure.TIM_Period = 500;
+    timerInitStructure.TIM_ClockDivision = TIM_CKD_DIV1;
+    timerInitStructure.TIM_RepetitionCounter = 0;
+    TIM_TimeBaseInit(TIM2, &timerInitStructure);
+    //TIM_Cmd(TIM2, ENABLE);
+    // timers: https://visualgdb.com/tutorials/arm/stm32/timers/
+
 
     timer_start();
 
