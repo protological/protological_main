@@ -1,99 +1,101 @@
-//
-// This file is part of the GNU ARM Eclipse distribution.
-// Copyright (c) 2014 Liviu Ionescu.
-//
 
-// ----------------------------------------------------------------------------
 
 #include <stdio.h>
 #include <stdlib.h>
+
 #include "diag/Trace.h"
 
 #include "Timer.h"
-#include "BlinkLed.h"
 
 /* wolfSSL */
 #include <wolfssl/options.h>
 #include <wolfssl/ssl.h>
 
-// ----------------------------------------------------------------------------
-//
-// Standalone STM32F1 led blink sample (trace via DEBUG).
-//
-// In debug configurations, demonstrate how to print a greeting message
-// on the trace device. In release configurations the message is
-// simply discarded.
-//
-// Then demonstrates how to blink a led with 1 Hz, using a
-// continuous loop and SysTick delays.
-//
-// Trace support is enabled by adding the TRACE macro definition.
-// By default the trace messages are forwarded to the DEBUG output,
-// but can be rerouted to any device or completely suppressed, by
-// changing the definitions required in system/src/diag/trace_impl.c
-// (currently OS_USE_TRACE_SEMIHOSTING_DEBUG/_STDOUT).
-//
-// The external clock frequency is specified as a preprocessor definition
-// passed to the compiler via a command line option (see the 'C/C++ General' ->
-// 'Paths and Symbols' -> the 'Symbols' tab, if you want to change it).
-// The value selected during project creation was HSE_VALUE=8000000.
-//
-// Note: The default clock settings take the user defined HSE_VALUE and try
-// to reach the maximum possible system clock. For the default 8 MHz input
-// the result is guaranteed, but for other values it might not be possible,
-// so please adjust the PLL settings in system/src/cmsis/system_stm32f10x.c
-//
 
-// ----- Timing definitions -------------------------------------------------
 
 // Keep the LED on for 2/3 of a second.
 #define BLINK_ON_TICKS  (TIMER_FREQUENCY_HZ * 2 / 4)
 #define BLINK_OFF_TICKS (TIMER_FREQUENCY_HZ - BLINK_ON_TICKS)
 
 
-int main(int argc, char* argv[])
+// Port numbers: 0=A, 1=B, 2=C, 3=D, 4=E, 5=F, 6=G, ...
+#if 1
+#define BLINK_PORT_NUMBER               (0)
+#define BLINK_PIN_NUMBER                (9)
+#define BLINK_ACTIVE_LOW                (0)
+#else
+#define BLINK_PORT_NUMBER               (0)
+#define BLINK_PIN_NUMBER                (10)
+#define BLINK_ACTIVE_LOW                (1)
+#endif
+
+#define BLINK_GPIOx(_N)                 ((GPIO_TypeDef *)(GPIOA_BASE + (GPIOB_BASE-GPIOA_BASE)*(_N)))
+#define BLINK_PIN_MASK(_N)              (1 << (_N))
+#define BLINK_RCC_MASKx(_N)             (RCC_APB2Periph_GPIOA << (_N))
+
+void blink_led_init()
 {
-  // Send a greeting to the trace device (skipped on Release).
-  trace_puts("Hello ARM World!");
+  // Enable GPIO Peripheral clock
+  RCC_APB2PeriphClockCmd(BLINK_RCC_MASKx(BLINK_PORT_NUMBER), ENABLE);
 
-  // At this stage the system clock should have already been configured
-  // at high speed.
-  trace_printf("System clock: %u Hz\n", SystemCoreClock);
+  GPIO_InitTypeDef GPIO_InitStructure;
 
-  timer_start();
+  // Configure pin in output push/pull mode
+  GPIO_InitStructure.GPIO_Pin = BLINK_PIN_MASK(BLINK_PIN_NUMBER);
+  GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
+  GPIO_InitStructure.GPIO_Mode = GPIO_Mode_Out_PP;
+  GPIO_Init(BLINK_GPIOx(BLINK_PORT_NUMBER), &GPIO_InitStructure);
 
-  blink_led_init();
-  
-  {
-      /* declare wolfSSL objects */
-     WOLFSSL_CTX* ctx;
-     WOLFSSL*     ssl;
-
-
-     /* Initialize wolfSSL */
-     wolfSSL_Init();
-
-     ctx = wolfSSL_CTX_new(wolfTLSv1_2_client_method());
-
-  }
-
-  uint32_t seconds = 0;
-
-  // Infinite loop
-  while (1)
-    {
-      blink_led_on();
-      timer_sleep(seconds == 0 ? TIMER_FREQUENCY_HZ : BLINK_ON_TICKS);
-
-      blink_led_off();
-      timer_sleep(BLINK_OFF_TICKS);
-
-      ++seconds;
-
-      // Count seconds on the trace device.
-      trace_printf("Second %u\n", seconds);
-    }
-  // Infinite loop, never return.
+  // Start with led turned off
+  GPIO_ResetBits(BLINK_GPIOx(BLINK_PORT_NUMBER),BLINK_PIN_MASK(BLINK_PIN_NUMBER));
 }
 
-// ----------------------------------------------------------------------------
+
+int main()
+{
+    // Send a greeting to the trace device (skipped on Release).
+    trace_puts("Hello ARM World!");
+
+    // At this stage the system clock should have already been configured
+    // at high speed.
+    trace_printf("System clock: %u Hz\n", SystemCoreClock);
+
+    timer_start();
+
+    blink_led_init();
+
+    {
+        /* declare wolfSSL objects */
+        WOLFSSL_CTX* ctx;
+        WOLFSSL*     ssl;
+
+
+        /* Initialize wolfSSL */
+        wolfSSL_Init();
+
+        ctx = wolfSSL_CTX_new(wolfTLSv1_2_client_method());
+
+    }
+
+    uint32_t seconds = 0;
+
+    // Infinite loop
+    while (1)
+    {
+        GPIO_SetBits(BLINK_GPIOx(BLINK_PORT_NUMBER),BLINK_PIN_MASK(BLINK_PIN_NUMBER));
+        timer_sleep(seconds == 0 ? TIMER_FREQUENCY_HZ : BLINK_ON_TICKS);
+
+        GPIO_ResetBits(BLINK_GPIOx(BLINK_PORT_NUMBER),BLINK_PIN_MASK(BLINK_PIN_NUMBER));
+        timer_sleep(BLINK_OFF_TICKS);
+
+        ++seconds;
+
+        // Count seconds on the trace device.
+        trace_printf("Second %u\n", seconds);
+    }
+
+    // return
+}
+
+
+// EOF
