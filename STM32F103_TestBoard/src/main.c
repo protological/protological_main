@@ -50,16 +50,6 @@
 #define BLINK_ON_TICKS  (TIMER_FREQUENCY_HZ * 2 / 4)
 #define BLINK_OFF_TICKS (TIMER_FREQUENCY_HZ - BLINK_ON_TICKS)
 
-// ----- main() ---------------------------------------------------------------
-
-// Sample pragmas to cope with warnings. Please note the related line at
-// the end of this function, used to pop the compiler diagnostics status.
-#if 0
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wunused-parameter"
-#pragma GCC diagnostic ignored "-Wmissing-declarations"
-#pragma GCC diagnostic ignored "-Wreturn-type"
-#endif
 
 int main(int argc, char* argv[])
 {
@@ -105,7 +95,5 @@ int main(int argc, char* argv[])
     }
   // Infinite loop, never return.
 }
-
-//#pragma GCC diagnostic pop
 
 // ----------------------------------------------------------------------------
