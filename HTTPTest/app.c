@@ -29,12 +29,14 @@
 #include "defs.h"
 
 #include "app.h"
-#include "debug.h"
+//#include "debug.h"
+#define DBG(...)
 
 #include "httpclient.h"
 
 #include <string.h>
 #include <stdlib.h>
+#include <stdio.h>
 
 #define NAME	"APP"
 
@@ -108,8 +110,8 @@ void app_test()
 
     //client_payload_add(m_client,"{\"message\":\"1234\"}",18);
 
-    client_getreq(m_client, "/junk", "192.168.100.100",80, app_headers_rx, app_payload_rx);
-    //client_getreq(m_client, "/posts/1", "jsonplaceholder.typicode.com",80, app_headers_rx, app_payload_rx);
+    //client_getreq(m_client, "/junk", "192.168.100.100",80, app_headers_rx, app_payload_rx);
+    client_getreq(m_client, "/posts/1", "jsonplaceholder.typicode.com",80, app_headers_rx, app_payload_rx);
 
 
     client_postreq(m_client, "/", "192.168.100.100",80, app_headers_rx, app_payload_rx);

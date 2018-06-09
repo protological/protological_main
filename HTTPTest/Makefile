@@ -6,7 +6,17 @@ TARGET=INTEL
 # Basic system (Desktop)
 C_COMPILE = gcc
 CXX_COMPILE = g++
+OBJCOPY=objcopy
 RFS_ROOT=
+
+ifeq ($(TARGET),ARM)
+    # ARM system
+    C_COMPILE = arm-linux-gnueabihf-gcc
+    CXX_COMPILE = arm-linux-gnueabihf-g++
+    OBJCOPY = arm-linux-gnueabihf-objcopy
+    RFS_ROOT=
+endif
+
 DFLAGS =
 NAME = test
 OPT = -O0
@@ -26,7 +36,7 @@ CFLAGS += -g $(OPT)
 
 CXXFLAGS = -Wno-write-strings -std=c++11 -Wno-format
 
-DFLAGS += -DDEBUG
+#DFLAGS += -DDEBUG
 
 # Directories and files
 ######################################################
@@ -77,13 +87,19 @@ all-pre:
 #	echo $(OBJ_FILES)
 	echo "-- Building $(EXEC) - $(CC) --"
 	mkdir -p $(foreach dir,$(DIRS),$(PATH_OBJ)$(dir))
-	
+
+ifeq ($(TARGET),ARM)
 all-post:
-#	echo "Done..."
+	echo "ARM OBJCOPY"
+	#$(OBJCOPY) -O binary $(EXEC) $(EXEC).binary
+else	
+all-post:
+	echo "Done..."
+endif
 
 $(EXEC):  $(OBJ_FILES)
 	echo "  LNK $@"
-	$(CXX) $(DFLAG) -s -o $(PATH_TARGET)$@ $(foreach dir,$(DIRS),$(PATH_OBJ)$(dir)*.o) $(LIBS) $(LDFLAGS)
+	$(CC) $(DFLAG) -s -o $(PATH_TARGET)$@ $(foreach dir,$(DIRS),$(PATH_OBJ)$(dir)*.o) $(LIBS) $(LDFLAGS)
 
 $(PATH_OBJ)%.o:%.c
 	echo "  CC  $@"

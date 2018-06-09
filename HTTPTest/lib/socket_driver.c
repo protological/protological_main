@@ -43,13 +43,13 @@
 #define DBG(...)
 #endif
 
+//#define EMPTY_FUNCTIONS
 
 // Types and defines
 // ---------------------------------------------------------------------------
 
 // Local prototypes
 // ---------------------------------------------------------------------------
-static uint32_t parseIPV4string(char* ipAddress);
 
 // Variables
 // ---------------------------------------------------------------------------
@@ -58,7 +58,47 @@ static uint8_t m_rx_buffer[100];
 
 // Public functions
 // ---------------------------------------------------------------------------
+#if defined(EMPTY_FUNCTIONS)
+void driver_sock_init()
+{
+    memset(active_sockets,0,sizeof(active_sockets));
+}
 
+int driver_sock_hosttoip(char * host, char * ip)
+{
+    return 0;
+}
+
+int driver_sock_new(socket_proto_t proto)
+{
+    return 0;
+}
+
+int driver_sock_connect(int sock, char * ipaddr, uint16_t port)
+{
+    return 0;
+}
+
+int driver_sock_close(int sock)
+{
+    return 0;
+}
+
+int driver_sock_send(int sock, uint8_t * data, int size)
+{
+    return size;
+}
+
+int driver_sock_recv(int sock, uint8_t * data, int size)
+{
+    return 0;
+}
+
+void driver_process()
+{
+    return;
+}
+#else
 void driver_sock_init()
 {
     memset(active_sockets,0,sizeof(active_sockets));
@@ -172,13 +212,7 @@ int driver_sock_send(int sock, uint8_t * data, int size)
 {
     if(sock<1) return -1;
     DBG("%s: Socket %d send %d bytes (x%08X)\n",NAME,sock, size, (int)data);
-#if 1
     return send(sock,data,size, 0);
-#else
-    data[size]=0;
-    printf("TX: --%s--",(char*)data);
-    return size;
-#endif
 }
 
 int driver_sock_recv(int sock, uint8_t * data, int size)
@@ -215,17 +249,8 @@ void driver_process()
     }
 	return;
 }
-
+#endif
 // Private functions
 // ---------------------------------------------------------------------------
-
-// https://stackoverflow.com/questions/10283703/conversion-of-ip-address-to-integer
-#if 0
-static uint32_t parseIPV4string(char* ipAddress) {
-  char ipbytes[4];
-  sscanf(ipAddress, "%uhh.%uhh.%uhh.%uhh", &ipbytes[3], &ipbytes[2], &ipbytes[1], &ipbytes[0]);
-  return ipbytes[0] | ipbytes[1] << 8 | ipbytes[2] << 16 | ipbytes[3] << 24;
-}
-#endif
 
 // EOF

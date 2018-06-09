@@ -47,14 +47,12 @@
 
 // Local prototypes
 // ---------------------------------------------------------------------------
-static void _client_load_uri(client_t * c, char * method, char * uri);
-static void _client_load_boilerplate(client_t * c, char * host);
-static void _client_load_headers(client_t * c);
-static void _client_load_payload(client_t * c);
-static void _client_load_string(client_t * , char * str);
+static bool _client_load_uri(client_t * c, char * method, char * uri);
+static bool _client_load_boilerplate(client_t * c, char * host);
+static bool _client_load_headers(client_t * c);
+static bool _client_load_payload(client_t * c);
+static bool _client_load_string(client_t * , char * str);
 static int _client_req(client_t * c, char * method, char * path,char * host, int port, client_header_callback_t headers_cb,client_payload_callback_t payload_cb);
-static void _client_buffer_clear(client_buffer_t * b);
-
 static void _client_socket_rx(int sock, uint8_t * buf, int size);
 
 // Variables
@@ -166,17 +164,19 @@ static void _check_txbuffer(client_t * C){
         DBG("%s: WARNING Buffer at %d of %d\n",NAME,(C)->tx.index,(C)->tx.size);
 }
 
-static void _client_load_uri(client_t * c, char * method, char * uri)
+static bool _client_load_uri(client_t * c, char * method, char * uri)
 {
-    if(!c || !(c->tx.buffer)) return;
+    // TODO: Add bouncds checking
+    if(!c || !(c->tx.buffer)) return false;
     _check_txbuffer(c);
     TXINDEX(c) += sprintf(TXHEAD(c),
             "%s %s HTTP/1.1%s",method,uri,CRLF);
-    return;
+    return true;
 }
-static void _client_load_boilerplate(client_t * c,char * host)
+static bool _client_load_boilerplate(client_t * c,char * host)
 {
-    if(!c || !(c->tx.buffer)) return;
+    // TODO: Add bouncds checking
+    if(!c || !(c->tx.buffer)) return false;
     _check_txbuffer(c);
     // Add in the user-agent
     TXINDEX(c) += sprintf(TXHEAD(c),
@@ -188,12 +188,13 @@ static void _client_load_boilerplate(client_t * c,char * host)
                 "host: %s%s",host,CRLF);
     // Add in ....
 
-    return;
+    return true;
 }
-static void _client_load_headers(client_t * c)
+static bool _client_load_headers(client_t * c)
 {
+    // TODO: Add bouncds checking
     int x;
-    if(!c || !(c->tx.buffer)) return;
+    if(!c || !(c->tx.buffer)) return false;
     _check_txbuffer(c);
 
     for(x=0;x<c->headers_count;x++)
@@ -204,21 +205,24 @@ static void _client_load_headers(client_t * c)
             TXINDEX(c) += sprintf(TXHEAD(c),"%s",c->headers[x].value);
         TXINDEX(c) += sprintf(TXHEAD(c),"%s",CRLF);
     }
-    return;
+    return true;
 }
-static void _client_load_payload(client_t * c)
+static bool _client_load_payload(client_t * c)
 {
-    if(!c || !(c->tx.buffer)) return;
+    // TODO: Add bouncds checking
+    if(!c || !(c->tx.buffer)) return false;
     _check_txbuffer(c);
     memcpy(TXHEAD(c),c->payload,c->payload_size);
     TXINDEX(c) += c->payload_size;
-    return;
+    return true;
 }
-static void _client_load_string(client_t * c, char * str)
+static bool _client_load_string(client_t * c, char * str)
 {
-    if(!c || !(c->tx.buffer)) return;
+    // TODO: Add bouncds checking
+    if(!c || !(c->tx.buffer)) return false;
     _check_txbuffer(c);
     TXINDEX(c) += sprintf(TXHEAD(c),"%s",str);
+    return true;
 }
 
 static int _client_req(client_t * c, char * method, char * path,char * host, int port, client_header_callback_t headers_cb,client_payload_callback_t payload_cb)
@@ -235,7 +239,7 @@ static int _client_req(client_t * c, char * method, char * path,char * host, int
         return -1;
     }
 
-
+    // TODO: Add bouncds checking, is return false?
     _client_load_uri(c, method, path);
     _client_load_boilerplate(c, host);
     _client_load_headers(c);
@@ -254,7 +258,7 @@ static int _client_req(client_t * c, char * method, char * path,char * host, int
     //DBG("REQ: --%s--\n",c->tx.buffer);
     c->transmitting = true;
     c->rx_state = RX_STATE_HEADERS;
-    printf("%s\n",c->tx.buffer);
+    //printf("%s\n",c->tx.buffer);
     DBG("%s: Socket %d send %d bytes (x%08X)\n",NAME,c->sock, c->tx.size, (int)(c->tx.buffer));
     ret = sock_send(c->sock,(uint8_t*)(c->tx.buffer),c->tx.index);
     if(ret<c->tx.index)
@@ -262,13 +266,6 @@ static int _client_req(client_t * c, char * method, char * path,char * host, int
         DBG("%s: Only sent %d of %d bytes\n",NAME,ret,c->tx.index);
     }
     return ret;
-}
-
-static void _client_buffer_clear(client_buffer_t * b)
-{
-    if(!b) return;
-    b->index=0;
-    return;
 }
 
 static void _client_socket_rx(int sock, uint8_t * buf, int size)
