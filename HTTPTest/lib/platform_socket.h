@@ -41,6 +41,8 @@ typedef enum{
 
 void sock_initlib();
 
+int sock_hosttoip(char * host, char * ip);
+
 int sock_new(sock_proto_t proto, socket_rx_callback_t cb);
 
 int sock_connect(int sock, char * ipaddr, uint16_t port);

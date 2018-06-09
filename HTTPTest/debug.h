@@ -29,6 +29,8 @@
 #ifndef __DEBUG_H__
 #define __DEBUG_H__
 
+#define pbuf(B,S)   do{int x;for(x=0;x<S;x++) printf("x%02X,",(B)[x]); printf("\n");}while(0)
+
 #include <stdio.h>
 #define DBG(...) 	printf(__VA_ARGS__)
 

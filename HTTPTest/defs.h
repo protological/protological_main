@@ -32,6 +32,9 @@
 #include <stdint.h>
 #include <stdbool.h>
 
+#define cmp(B,S)    (strncmp((B),(S),sizeof(S)-1)==0)
+#define pbuf(B,S)   do{int x;for(x=0;x<S;x++) printf("x%02X,",(B)[x]); printf("\n");}while(0)
+
 #define strset(B,S) (strncpy((B),(S),sizeof(S)-1),(int)(sizeof(S)-1));
 
 #define MSEC_PER_SEC    1000

@@ -27,12 +27,13 @@
  * Author: Andrew Gaylo <drew@clisystems.com>
  */
 #include <string.h>
+#include <stdio.h>
 
 #include "platform_socket.h"
 #include "httpclient.h"
 
 #define NAME	"CLIENT"
-#ifdef DEBUG
+#if defined(DEBUG) && 0
 #include "debug.h"
 #else
 #define DBG(...)
@@ -47,11 +48,11 @@
 // Local prototypes
 // ---------------------------------------------------------------------------
 static void _client_load_uri(client_t * c, char * method, char * uri);
-static void _client_load_boilerplate(client_t * c);
+static void _client_load_boilerplate(client_t * c, char * host);
 static void _client_load_headers(client_t * c);
 static void _client_load_payload(client_t * c);
 static void _client_load_string(client_t * , char * str);
-static int _client_req(client_t * c, char * method, char * path,char * ipaddr, int port, client_rx_callback_t cb);
+static int _client_req(client_t * c, char * method, char * path,char * host, int port, client_header_callback_t headers_cb,client_payload_callback_t payload_cb);
 static void _client_buffer_clear(client_buffer_t * b);
 
 static void _client_socket_rx(int sock, uint8_t * buf, int size);
@@ -83,6 +84,11 @@ client_t * client_new()
 	m_single_client.sock = sock;
 	m_single_client.tx.buffer = m_tx_buffer;
 	m_single_client.tx.size = sizeof(m_tx_buffer);
+	m_single_client.tx.index = 0;
+	m_single_client.rx.buffer = m_rx_buffer;
+    m_single_client.rx.size = sizeof(m_rx_buffer);
+    m_single_client.rx.index = 0;
+    m_single_client.rx_state = RX_STATE_HEADERS;
 	if(sock<0){
 		DBG("%s: Error, socket is %d\n",NAME,sock);
 		return NULL;
@@ -115,17 +121,17 @@ bool client_payload_add(client_t * c, char * payload, int size)
     return true;
 }
 
-int client_getreq(client_t * c, char * path,char * ipaddr, int port, client_rx_callback_t cb)
+int client_getreq(client_t * c, char * path,char * host, int port, client_header_callback_t headers_cb,client_payload_callback_t payload_cb)
 {
-    return _client_req(c, "GET", path,ipaddr,port,cb);
+    return _client_req(c, "GET", path,host,port,headers_cb,payload_cb);
 }
-int client_postreq(client_t * c, char * path,char * ipaddr, int port, client_rx_callback_t cb)
+int client_postreq(client_t * c, char * path,char * host, int port, client_header_callback_t headers_cb,client_payload_callback_t payload_cb)
 {
-    return _client_req(c, "POST", path,ipaddr,port,cb);
+    return _client_req(c, "POST", path,host,port,headers_cb,payload_cb);
 }
-int client_deletereq(client_t * c, char * path,char * ipaddr, int port, client_rx_callback_t cb)
+int client_deletereq(client_t * c, char * path,char * host, int port, client_header_callback_t headers_cb,client_payload_callback_t payload_cb)
 {
-    return _client_req(c, "DELETE", path,ipaddr,port,cb);
+    return _client_req(c, "DELETE", path,host,port,headers_cb,payload_cb);
 }
 void client_reqcomplete(client_t *c)
 {
@@ -155,7 +161,7 @@ void client_process()
 #define TXINDEX(C)    (C)->tx.index
 #define TXHEAD(C)     &((C)->tx.buffer[(C)->tx.index])
 
-static void _check_buffer(client_t * C){
+static void _check_txbuffer(client_t * C){
     if((C)->tx.index>=(C)->tx.size-50)
         DBG("%s: WARNING Buffer at %d of %d\n",NAME,(C)->tx.index,(C)->tx.size);
 }
@@ -163,22 +169,23 @@ static void _check_buffer(client_t * C){
 static void _client_load_uri(client_t * c, char * method, char * uri)
 {
     if(!c || !(c->tx.buffer)) return;
-    _check_buffer(c);
+    _check_txbuffer(c);
     TXINDEX(c) += sprintf(TXHEAD(c),
             "%s %s HTTP/1.1%s",method,uri,CRLF);
     return;
 }
-static void _client_load_boilerplate(client_t * c)
+static void _client_load_boilerplate(client_t * c,char * host)
 {
     if(!c || !(c->tx.buffer)) return;
-    _check_buffer(c);
+    _check_txbuffer(c);
     // Add in the user-agent
     TXINDEX(c) += sprintf(TXHEAD(c),
             "user-agent: %s%s",USER_AGENT,CRLF);
     // Add in the current timestamp
 
     // Add in the host
-
+    TXINDEX(c) += sprintf(TXHEAD(c),
+                "host: %s%s",host,CRLF);
     // Add in ....
 
     return;
@@ -187,7 +194,7 @@ static void _client_load_headers(client_t * c)
 {
     int x;
     if(!c || !(c->tx.buffer)) return;
-    _check_buffer(c);
+    _check_txbuffer(c);
 
     for(x=0;x<c->headers_count;x++)
     {
@@ -202,7 +209,7 @@ static void _client_load_headers(client_t * c)
 static void _client_load_payload(client_t * c)
 {
     if(!c || !(c->tx.buffer)) return;
-    _check_buffer(c);
+    _check_txbuffer(c);
     memcpy(TXHEAD(c),c->payload,c->payload_size);
     TXINDEX(c) += c->payload_size;
     return;
@@ -210,19 +217,27 @@ static void _client_load_payload(client_t * c)
 static void _client_load_string(client_t * c, char * str)
 {
     if(!c || !(c->tx.buffer)) return;
-    _check_buffer(c);
+    _check_txbuffer(c);
     TXINDEX(c) += sprintf(TXHEAD(c),"%s",str);
 }
 
-static int _client_req(client_t * c, char * method, char * path,char * ipaddr, int port, client_rx_callback_t cb)
+static int _client_req(client_t * c, char * method, char * path,char * host, int port, client_header_callback_t headers_cb,client_payload_callback_t payload_cb)
 {
     int ret;
+    char ipaddr[16];
+    if(!c || !path || !host) return -1;
+    if(c->transmitting){ DBG("%s: Transmissing can't start again\n",NAME); return -1;}
 
-    if(!c || !path || !ipaddr) return -1;
-    if(c->transmitting) return -1;
+    // TODO: Get ip from hostname
+    if(sock_hosttoip(host, ipaddr)<0)
+    {
+        DBG("%s: Error with get IP for host '%s'\n",NAME,host);
+        return -1;
+    }
+
 
     _client_load_uri(c, method, path);
-    _client_load_boilerplate(c);
+    _client_load_boilerplate(c, host);
     _client_load_headers(c);
     _client_load_string(c,CRLF);
     _client_load_payload(c);
@@ -233,10 +248,13 @@ static int _client_req(client_t * c, char * method, char * path,char * ipaddr, i
             return -1;
         }
     }
-    c->rx_cb = cb;
+    c->rx_headers_cb = headers_cb;
+    c->rx_payload_cb = payload_cb;
 
     //DBG("REQ: --%s--\n",c->tx.buffer);
     c->transmitting = true;
+    c->rx_state = RX_STATE_HEADERS;
+    printf("%s\n",c->tx.buffer);
     DBG("%s: Socket %d send %d bytes (x%08X)\n",NAME,c->sock, c->tx.size, (int)(c->tx.buffer));
     ret = sock_send(c->sock,(uint8_t*)(c->tx.buffer),c->tx.index);
     if(ret<c->tx.index)
@@ -256,6 +274,12 @@ static void _client_buffer_clear(client_buffer_t * b)
 static void _client_socket_rx(int sock, uint8_t * buf, int size)
 {
     client_t * c;
+    char * line_end;
+    int index;
+    bool process;
+    char * key;
+    char * val;
+
     //for(x=0;x<list;x++
     c = &m_single_client;
     if(c->sock!=sock){
@@ -263,8 +287,53 @@ static void _client_socket_rx(int sock, uint8_t * buf, int size)
         return;
     }
     DBG("%s: Got %d bytes for socket %d\n",NAME,size,sock);
-    c->transmitting = false;
-    if(c->rx_cb) c->rx_cb(buf,size);
+
+    memcpy(&(c->rx.buffer[c->rx.index]),buf,size);
+    c->rx.index += size;
+
+    process = true;
+    do{
+        //pbuf(c->rx.buffer,c->rx.index);
+        switch(c->rx_state){
+        case RX_STATE_HEADERS:
+
+            line_end = strstr(c->rx.buffer,CRLF);
+            if(line_end)
+            {
+                index = (int)(line_end - c->rx.buffer);
+                DBG("%s: Found line end at %d\n",NAME,index);
+                // Do things with line
+                c->rx.buffer[index]=0;
+                if(index==0)
+                {
+                    c->rx_state = RX_STATE_PAYLOAD;
+                    DBG("%s: Headers RX done\n",NAME);
+                }else{
+                    //printf("----%s\n\n",c->rx.buffer);
+                    key = strtok(c->rx.buffer,":");
+                    val = strtok(NULL,"");
+                    if(c->rx_headers_cb) c->rx_headers_cb(key,val);
+                }
+
+                // Move data down
+                memmove(c->rx.buffer,&(c->rx.buffer[index+2]), c->rx.index-index-2);
+                c->rx.index-=index+2;
+                c->rx.buffer[c->rx.index]=0;
+            }else{
+                process = false;
+            }
+            break;
+        case RX_STATE_PAYLOAD:
+            DBG("%s: Payload %d bytes\n",NAME,c->rx.index);
+            if(c->rx_payload_cb) c->rx_payload_cb(c->rx.buffer,c->rx.index);
+            c->rx.index=0;
+            c->rx.buffer[0]=0;
+            process=false;
+            break;
+        }
+    }while(process);
+
+    //if(c->rx_cb) c->rx_cb(buf,size);
     return;
 }
 

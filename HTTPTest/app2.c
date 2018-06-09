@@ -26,6 +26,7 @@
  *
  * Author: Andrew Gaylo <drew@clisystems.com>
  */
+#if 0
 #include "defs.h"
 
 #include "app2.h"
@@ -90,6 +91,7 @@ void app2_test()
     client_end(&client);
     return;
 }
+#endif
 #endif
 
 // EOF

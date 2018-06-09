@@ -43,6 +43,8 @@ typedef void (*socket_rx_callback_t)(int socket, uint8_t * buf, int size);
 
 void socket_initlib();
 
+int socket_hosttoip(char * host, char * ip);
+
 int socket_new(socket_proto_t proto, socket_rx_callback_t cb);
 
 int socket_connect(int sock, char * ipaddr, uint16_t port);

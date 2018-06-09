@@ -33,6 +33,8 @@
 
 void tls_initlib();
 
+int tls_hosttoip(char * host, char * ip);
+
 int tls_socket_new(socket_rx_callback_t cb);
 
 int tls_socket_connect(int sock, char * ipaddr, uint16_t port);

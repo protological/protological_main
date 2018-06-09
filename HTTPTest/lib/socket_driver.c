@@ -32,10 +32,12 @@
 #include <string.h>
 #include <arpa/inet.h>
 #include <sys/ioctl.h>
+#include <stdio.h>
+#include<netdb.h> //hostent
 
 #include "socket_driver.h"
 #define NAME	"DRIVER"
-#ifdef DEBUG
+#if defined(DEBUG) && 0
 #include "debug.h"
 #else
 #define DBG(...)
@@ -60,6 +62,40 @@ static uint8_t m_rx_buffer[100];
 void driver_sock_init()
 {
     memset(active_sockets,0,sizeof(active_sockets));
+}
+
+// https://www.binarytides.com/hostname-to-ip-address-c-sockets-linux/
+int driver_sock_hosttoip(char * host, char * ip)
+{
+    struct hostent *he;
+    struct in_addr **addr_list;
+    int i;
+
+    if ( (he = gethostbyname( host ) ) == NULL)
+    {
+        // get the host info
+        DBG("%s: Error with gethostbyname",NAME);
+        return -1;
+    }
+
+    addr_list = (struct in_addr **) he->h_addr_list;
+#if 1
+    if(addr_list[0]!=NULL)
+    {
+        //Return the first one;
+        strcpy(ip , inet_ntoa(*addr_list[0]) );
+        return 0;
+    }
+#else
+    for(i = 0; addr_list[i] != NULL; i++)
+    {
+        //Return the first one;
+        strcpy(ip , inet_ntoa(*addr_list[i]) );
+        return 0;
+    }
+#endif
+
+    return -1;
 }
 
 int driver_sock_new(socket_proto_t proto)

@@ -30,7 +30,7 @@
 #include "tls.h"
 
 #define NAME	"TLS"
-#ifdef DEBUG
+#if defined(DEBUG) && 0
 #include "debug.h"
 #else
 #define DBG(...)
@@ -53,6 +53,11 @@ void tls_initlib()
 {
     // Setup the tls library
     return;
+}
+
+int tls_hosttoip(char * host, char * ip)
+{
+    return socket_hosttoip(host, ip);
 }
 
 int tls_socket_new(socket_rx_callback_t cb)

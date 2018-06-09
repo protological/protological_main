@@ -31,8 +31,12 @@
 
 #define CLIENT_MAX_HEADERS  10
 
-typedef void (*client_rx_callback_t)(uint8_t * buf, int size);
-
+typedef void (*client_header_callback_t)(char * key, char * value);
+typedef void (*client_payload_callback_t)(char * buf, int size);
+typedef enum{
+    RX_STATE_HEADERS=0,
+    RX_STATE_PAYLOAD,
+}client_rx_state_e;
 typedef struct{
     char * buffer;
     int size;
@@ -48,7 +52,10 @@ typedef struct{
 	bool open;
 	bool transmitting;
 	client_buffer_t tx;
-	client_rx_callback_t rx_cb;
+	client_buffer_t rx;
+	client_rx_state_e rx_state;
+	client_header_callback_t rx_headers_cb;
+	client_payload_callback_t rx_payload_cb;
 	client_headers_t headers[CLIENT_MAX_HEADERS];
 	int headers_count;
 	char * payload;
@@ -63,11 +70,11 @@ bool client_header_add(client_t * c, char * key, char * value);
 
 bool client_payload_add(client_t * c, char * payload, int size);
 
-int client_getreq(client_t * c, char * path,char * ipaddr, int port, client_rx_callback_t cb);
+int client_getreq(client_t * c, char * path,char * host, int port, client_header_callback_t headers_cb,client_payload_callback_t payload_cb);
 
-int client_postreq(client_t * c, char * path,char * ipaddr, int port, client_rx_callback_t cb);
+int client_postreq(client_t * c, char * path,char * host, int port, client_header_callback_t headers_cb,client_payload_callback_t payload_cb);
 
-int client_deletereq(client_t * c, char * path,char * ipaddr, int port, client_rx_callback_t cb);
+int client_deletereq(client_t * c, char * path,char * host, int port, client_header_callback_t headers_cb,client_payload_callback_t payload_cb);
 
 void client_reqcomplete(client_t *c);
 

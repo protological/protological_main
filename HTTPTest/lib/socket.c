@@ -30,8 +30,9 @@
 
 #include "socket.h"
 #include "socket_driver.h"
+
 #define NAME	"SOCKET"
-#ifdef DEBUG
+#if defined(DEBUG) && 0
 #include "debug.h"
 #else
 #define DBG(...)
@@ -60,7 +61,7 @@ typedef struct{
 // ---------------------------------------------------------------------------
 
 socket_control_block_t SCB[NUM_SOCKETS];
-uint8_t rx_buffers[NUM_SOCKETS][RX_BUFFER_SIZE];
+//uint8_t rx_buffers[NUM_SOCKETS][RX_BUFFER_SIZE];
 
 // Public functions
 // ---------------------------------------------------------------------------
@@ -75,6 +76,11 @@ void socket_initlib()
 		SCB[x].system_socket_id = -1;
 	}
 	return;
+}
+
+int socket_hosttoip(char * host, char * ip)
+{
+    return driver_sock_hosttoip(host,ip);
 }
 
 int socket_new(socket_proto_t proto, socket_rx_callback_t cb)

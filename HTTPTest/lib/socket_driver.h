@@ -33,6 +33,8 @@
 
 void driver_sock_init();
 
+int driver_sock_hosttoip(char * host, char * ip);
+
 int driver_sock_new(socket_proto_t proto);
 
 int driver_sock_connect(int sock, char * ipaddr, uint16_t port);

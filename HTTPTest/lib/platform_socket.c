@@ -30,7 +30,7 @@
 #include "platform_socket.h"
 
 #define NAME	"PLTSOCK"
-#ifdef DEBUG
+#if defined(DEBUG) && 0
 #include "debug.h"
 #else
 #define DBG(...)
@@ -53,6 +53,11 @@ void sock_initlib()
 {
     socket_initlib();
     tls_initlib();
+}
+
+int sock_hosttoip(char * host, char * ip)
+{
+    return socket_hosttoip(host, ip);
 }
 
 int sock_new(sock_proto_t proto,socket_rx_callback_t cb)
