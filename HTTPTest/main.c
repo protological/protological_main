@@ -38,6 +38,7 @@
 #include "platform_socket.h"
 #include "httpclient.h"
 #include "app.h"
+#include "app2.h"
 
 bool g_running = false;
 
@@ -67,6 +68,7 @@ int main()
     client_initlib();
 
     app_init();
+    app2_init();
 
 #if 0
     app_test();
@@ -74,14 +76,15 @@ int main()
 #else
     while(g_running)
     {
+        app2_mainloop();
     	app_mainloop();
     	driver_process();
     	client_process();
     	usleep(0.1*USEC_PER_SEC);
-    	//g_running = false;
+    	g_running = false;
     }
 #endif
-
+    app2_end();
     app_end();
 
     printf("End\n");

@@ -43,6 +43,10 @@ typedef enum{
 
 static app_states_e m_state;
 static client_t * m_client;
+void app_rx(uint8_t * buf, int size)
+{
+    DBG("%s: Got RX of %d bytes\n",NAME,size);
+}
 
 void app_init()
 {
@@ -59,7 +63,9 @@ void app_init()
     for(x=0;x<CLIENT_MAX_HEADERS;x++)
         client_header_add(m_client,"x-auth-key","adf4238a-882b-9ddc-4a9d-5b6758e4159e");
 
-    client_getreq(m_client, "/", "127.0.0.1",12345);
+    client_payload_add(m_client,"{\"message\":\"1234\"}",18);
+
+    client_getreq(m_client, "/", "127.0.0.1",12345, app_rx);
 
     DBG("%s: Started\n",NAME);
 	return;

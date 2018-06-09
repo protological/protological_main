@@ -26,67 +26,70 @@
  *
  * Author: Andrew Gaylo <drew@clisystems.com>
  */
-#include "socket.h"
-#include "tls.h"
+#include "defs.h"
 
-#define NAME	"TLS"
-#ifdef DEBUG
+#include "app2.h"
 #include "debug.h"
-#else
-#define DBG(...)
-#endif
 
-// Types and defines
-// ---------------------------------------------------------------------------
+#include "httpclient.h"
 
-// Local prototypes
-// ---------------------------------------------------------------------------
+#define NAME	"APP2"
 
-// Variables
-// ---------------------------------------------------------------------------
-
-// Public functions
-// ---------------------------------------------------------------------------
+typedef enum{
+    STATE_INIT = 0,
+    STATE_MAIN,
+}app_states_e;
 
 
-void tls_initlib()
+static app_states_e m_state;
+static client_t * m_client;
+static void app2_rx(uint8_t * buf, int size)
 {
-    // Setup the tls library
+    DBG("%s: Got RX of %d bytes\n",NAME,size);
+}
+void app2_init()
+{
+    int x;
+    for(x=0;x<5;x++)
+    {
+        m_client = client_new();
+        client_header_add(m_client,"Testing","1234");
+        client_end(m_client);
+    }
+
+    m_client = client_new();
+    client_header_add(m_client,"Testing","1234");
+    for(x=0;x<CLIENT_MAX_HEADERS;x++)
+        client_header_add(m_client,"x-auth-key","adf4238a-882b-9ddc-4a9d-5b6758e4159e");
+
+    client_getreq(m_client, "/", "127.0.0.1",12345, app2_rx);
+
+    DBG("%s: Started\n",NAME);
+	return;
+}
+
+void app2_end()
+{
+    client_end(m_client);
+    DBG("%s: Ended\n",NAME);
+	return;
+}
+
+void app2_mainloop()
+{
+	return;
+}
+
+#if 0
+void app2_test()
+{
+    client_t client;
+    client = client_new("127.0.0.1",80);
+    client_header_add(&client,"Testing","1234");
+
+    client_end(&client);
     return;
 }
+#endif
 
-int tls_socket_new(socket_rx_callback_t cb)
-{
-    return socket_new(PROTO_TCP,cb);
-}
-
-int tls_socket_connect(int sock, char * ipaddr, uint16_t port)
-{
-    return socket_connect(sock,ipaddr,port);
-}
-
-bool tls_socket_connected(int sock)
-{
-    return socket_connected(sock);
-}
-
-int tls_socket_close(int sock)
-{
-    return socket_close(sock);
-}
-
-int tls_socket_send(int sock, uint8_t * data, int size)
-{
-    return socket_send(sock,data,size);
-}
-
-int tls_socket_recv(int sock, uint8_t * data, int size)
-{
-    return socket_recv(sock,data,size);
-}
-
-int tls_socket_bytes_available(int sock)
-{
-    return socket_bytes_available(sock);
-}
 // EOF

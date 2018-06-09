@@ -31,6 +31,8 @@
 
 #define CLIENT_MAX_HEADERS  10
 
+typedef void (*client_rx_callback_t)(uint8_t * buf, int size);
+
 typedef struct{
     char * buffer;
     int size;
@@ -46,9 +48,11 @@ typedef struct{
 	bool open;
 	bool transmitting;
 	client_buffer_t tx;
-	client_buffer_t rx;
+	client_rx_callback_t rx_cb;
 	client_headers_t headers[CLIENT_MAX_HEADERS];
 	int headers_count;
+	char * payload;
+	int payload_size;
 }client_t;
 
 void client_initlib();
@@ -59,9 +63,11 @@ bool client_header_add(client_t * c, char * key, char * value);
 
 bool client_payload_add(client_t * c, char * payload, int size);
 
-void client_end(client_t * c);
+int client_getreq(client_t * c, char * path,char * ipaddr, int port, client_rx_callback_t cb);
 
-int client_getreq(client_t * c, char * path,char * ipaddr, int port);
+void client_reqcomplete(client_t *c);
+
+void client_end(client_t * c);
 
 void client_process();
 

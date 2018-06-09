@@ -26,7 +26,6 @@
  *
  * Author: Andrew Gaylo <drew@clisystems.com>
  */
-#include "socket.h"
 #include "tls.h"
 #include "platform_socket.h"
 
@@ -56,7 +55,7 @@ void sock_initlib()
     tls_initlib();
 }
 
-int sock_new(sock_proto_t proto)
+int sock_new(sock_proto_t proto,socket_rx_callback_t cb)
 {
 	socket_proto_t sproto;
 	switch(proto){
@@ -64,7 +63,7 @@ int sock_new(sock_proto_t proto)
 	case SOCK_PROTO_TCP: sproto=PROTO_TCP; break;
 	default: return -1;
 	}
-	return socket_new(sproto);
+	return socket_new(sproto,cb);
 }
 
 int sock_connect(int sock, char * ipaddr, uint16_t port)

@@ -51,7 +51,9 @@ static void _client_load_boilerplate(client_t * c);
 static void _client_load_headers(client_t * c);
 static void _client_load_payload(client_t * c);
 static void _client_load_string(client_t * , char * str);
-static void client_buffer_clear(client_buffer_t * b);
+static void _client_buffer_clear(client_buffer_t * b);
+
+static void _client_socket_rx(int sock, uint8_t * buf, int size);
 
 // Variables
 // ---------------------------------------------------------------------------
@@ -75,21 +77,16 @@ client_t * client_new()
 	    DBG("%s: Client already used\n",NAME);
 	    return NULL;
 	}
-	sock = sock_new(SOCK_PROTO_TCP);
+	sock = sock_new(SOCK_PROTO_TCP, _client_socket_rx);
 	memset(&m_single_client,0,sizeof(client_t));
 	m_single_client.sock = sock;
 	m_single_client.tx.buffer = m_tx_buffer;
 	m_single_client.tx.size = sizeof(m_tx_buffer);
-	m_single_client.tx.index = 0;
-	m_single_client.rx.buffer = m_rx_buffer;
-    m_single_client.rx.size = sizeof(m_rx_buffer);
-    m_single_client.rx.index = 0;
 	if(sock<0){
 		DBG("%s: Error, socket is %d\n",NAME,sock);
 		return NULL;
 	}
 	m_single_client.used=true;
-	m_single_client.headers_count = 0;
 	return &m_single_client;
 }
 
@@ -111,19 +108,13 @@ bool client_header_add(client_t * c, char * key, char * value)
 
 bool client_payload_add(client_t * c, char * payload, int size)
 {
+    if(!c) return false;
+    c->payload = payload;
+    c->payload_size = size;
     return true;
 }
 
-void client_end(client_t * c)
-{
-    if(!c) return;
-    sock_close(c->sock);
-    memset(c,0,sizeof(client_t));
-    c->used = false;
-    return;
-}
-
-int client_getreq(client_t * c, char * path,char * ipaddr, int port)
+int client_getreq(client_t * c, char * path,char * ipaddr, int port, client_rx_callback_t cb)
 {
     int ret;
 
@@ -133,8 +124,8 @@ int client_getreq(client_t * c, char * path,char * ipaddr, int port)
     _client_load_uri(c, "GET", path);
     _client_load_boilerplate(c);
     _client_load_headers(c);
-    _client_load_payload(c);
     _client_load_string(c,CRLF);
+    _client_load_payload(c);
 
     if(!sock_connected(c->sock)){
         if(sock_connect(c->sock,ipaddr,port)<0){
@@ -142,6 +133,7 @@ int client_getreq(client_t * c, char * path,char * ipaddr, int port)
             return -1;
         }
     }
+    c->rx_cb = cb;
 
     //DBG("REQ: --%s--\n",c->tx.buffer);
     c->transmitting = true;
@@ -153,6 +145,24 @@ int client_getreq(client_t * c, char * path,char * ipaddr, int port)
     }
     return ret;
 }
+
+void client_reqcomplete(client_t *c)
+{
+    if(!c) return;
+    c->transmitting = false;
+    c->tx.index=0;
+    return;
+}
+
+void client_end(client_t * c)
+{
+    if(!c) return;
+    sock_close(c->sock);
+    memset(c,0,sizeof(client_t));
+    c->used = false;
+    return;
+}
+
 
 void client_process()
 {
@@ -186,6 +196,8 @@ static void _client_load_boilerplate(client_t * c)
             "user-agent: %s%s",USER_AGENT,CRLF);
     // Add in the current timestamp
 
+    // Add in the host
+
     // Add in ....
 
     return;
@@ -208,6 +220,10 @@ static void _client_load_headers(client_t * c)
 }
 static void _client_load_payload(client_t * c)
 {
+    if(!c || !(c->tx.buffer)) return;
+    _check_buffer(c);
+    memcpy(TXHEAD(c),c->payload,c->payload_size);
+    TXINDEX(c) += c->payload_size;
     return;
 }
 static void _client_load_string(client_t * c, char * str)
@@ -217,10 +233,25 @@ static void _client_load_string(client_t * c, char * str)
     TXINDEX(c) += sprintf(TXHEAD(c),"%s",str);
 }
 
-static void client_buffer_clear(client_buffer_t * b)
+static void _client_buffer_clear(client_buffer_t * b)
 {
     if(!b) return;
     b->index=0;
+    return;
+}
+
+static void _client_socket_rx(int sock, uint8_t * buf, int size)
+{
+    client_t * c;
+    //for(x=0;x<list;x++
+    c = &m_single_client;
+    if(c->sock!=sock){
+        DBG("%s: Got socket %d, but have socket %d\n",NAME,sock,c->sock);
+        return;
+    }
+    DBG("%s: Got %d bytes for socket %d\n",NAME,size,sock);
+    c->transmitting = false;
+    if(c->rx_cb) c->rx_cb(buf,size);
     return;
 }
 

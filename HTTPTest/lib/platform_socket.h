@@ -32,6 +32,8 @@
 #include <stdbool.h>
 #include <stdint.h>
 
+#include "socket.h"
+
 typedef enum{
 	SOCK_PROTO_UDP=0,
 	SOCK_PROTO_TCP,
@@ -39,7 +41,7 @@ typedef enum{
 
 void sock_initlib();
 
-int sock_new(sock_proto_t proto);
+int sock_new(sock_proto_t proto, socket_rx_callback_t cb);
 
 int sock_connect(int sock, char * ipaddr, uint16_t port);
 

@@ -29,9 +29,11 @@
 #ifndef __TLS_H__
 #define __TLS_H__
 
+#include "socket.h"
+
 void tls_initlib();
 
-int tls_socket_new();
+int tls_socket_new(socket_rx_callback_t cb);
 
 int tls_socket_connect(int sock, char * ipaddr, uint16_t port);
 

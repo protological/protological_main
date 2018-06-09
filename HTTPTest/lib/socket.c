@@ -50,9 +50,7 @@ typedef struct{
 	int system_socket_id;
 	bool used;
 	bool connected;
-	uint8_t * rx_buffer;
-	int rx_buffer_size;
-	int rx_buffer_index;
+	socket_rx_callback_t cb;
 }socket_control_block_t;
 
 // Local prototypes
@@ -73,14 +71,13 @@ void socket_initlib()
 	for(x=0;x<NUM_SOCKETS;x++)
 	{
 		memset(&(SCB[x]),0,sizeof(socket_control_block_t));
-		SCB[x].rx_buffer = &(rx_buffers[x][0]);
-		SCB[x].rx_buffer_size = RX_BUFFER_SIZE;
+		SCB[x].cb = NULL;
 		SCB[x].system_socket_id = -1;
 	}
 	return;
 }
 
-int socket_new(socket_proto_t proto)
+int socket_new(socket_proto_t proto, socket_rx_callback_t cb)
 {
 	int sys_socket;
 	int x;
@@ -97,6 +94,7 @@ int socket_new(socket_proto_t proto)
 			SCB[x].used=true;
 			SCB[x].connected=false;
 			SCB[x].system_socket_id = sys_socket;
+			SCB[x].cb = cb;
 			DBG("%s: New socket %d to %s:%d\n",NAME,x,SCB[x].ipaddr,SCB[x].port);
 			return x;
 		}
@@ -167,13 +165,18 @@ int socket_recv(int sock, uint8_t * data, int size)
 
 int socket_bytes_available(int sock)
 {
-    if(sock<0 || sock>=NUM_SOCKETS || !SCB[sock].used || !SCB[sock].connected) return -1;
-    return SCB[sock].rx_buffer_index;
+    return 0;
 }
 
 void socket_rx_bytes(int sock, uint8_t * buf, int size)
 {
+    int x;
     DBG("%s: Socket %d RX %d bytes\n",NAME,sock,size);
+    for(x=0;x<NUM_SOCKETS;x++)
+    {
+        if(SCB[x].system_socket_id==sock)
+            if(SCB[x].cb) SCB[x].cb(x,buf,size);
+    }
     return;
 }
 
