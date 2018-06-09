@@ -32,7 +32,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-#define NUM_SOCKETS 3
+#define NUM_SOCKETS 1
 
 typedef enum{
 	PROTO_UDP=0,

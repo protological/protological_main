@@ -38,7 +38,8 @@
 
 // Types and defines
 // ---------------------------------------------------------------------------
-#define TLS
+//#define TLS
+
 // Local prototypes
 // ---------------------------------------------------------------------------
 
@@ -57,7 +58,11 @@ void sock_initlib()
 
 int sock_hosttoip(char * host, char * ip)
 {
+#ifdef TLS
+    return tls_hosttoip(host, ip);
+#else
     return socket_hosttoip(host, ip);
+#endif
 }
 
 int sock_new(sock_proto_t proto,socket_rx_callback_t cb)
