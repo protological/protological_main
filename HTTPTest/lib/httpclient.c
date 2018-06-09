@@ -51,6 +51,7 @@ static void _client_load_boilerplate(client_t * c);
 static void _client_load_headers(client_t * c);
 static void _client_load_payload(client_t * c);
 static void _client_load_string(client_t * , char * str);
+static int _client_req(client_t * c, char * method, char * path,char * ipaddr, int port, client_rx_callback_t cb);
 static void _client_buffer_clear(client_buffer_t * b);
 
 static void _client_socket_rx(int sock, uint8_t * buf, int size);
@@ -116,36 +117,16 @@ bool client_payload_add(client_t * c, char * payload, int size)
 
 int client_getreq(client_t * c, char * path,char * ipaddr, int port, client_rx_callback_t cb)
 {
-    int ret;
-
-    if(!c || !path || !ipaddr) return -1;
-    if(c->transmitting) return -1;
-
-    _client_load_uri(c, "GET", path);
-    _client_load_boilerplate(c);
-    _client_load_headers(c);
-    _client_load_string(c,CRLF);
-    _client_load_payload(c);
-
-    if(!sock_connected(c->sock)){
-        if(sock_connect(c->sock,ipaddr,port)<0){
-            DBG("%s: Error connecting\n",NAME);
-            return -1;
-        }
-    }
-    c->rx_cb = cb;
-
-    //DBG("REQ: --%s--\n",c->tx.buffer);
-    c->transmitting = true;
-    DBG("%s: Socket %d send %d bytes (x%08X)\n",NAME,c->sock, c->tx.size, (int)(c->tx.buffer));
-    ret = sock_send(c->sock,(uint8_t*)(c->tx.buffer),c->tx.index);
-    if(ret<c->tx.index)
-    {
-        DBG("%s: Only sent %d of %d bytes\n",NAME,ret,c->tx.index);
-    }
-    return ret;
+    return _client_req(c, "GET", path,ipaddr,port,cb);
 }
-
+int client_postreq(client_t * c, char * path,char * ipaddr, int port, client_rx_callback_t cb)
+{
+    return _client_req(c, "POST", path,ipaddr,port,cb);
+}
+int client_deletereq(client_t * c, char * path,char * ipaddr, int port, client_rx_callback_t cb)
+{
+    return _client_req(c, "DELETE", path,ipaddr,port,cb);
+}
 void client_reqcomplete(client_t *c)
 {
     if(!c) return;
@@ -231,6 +212,38 @@ static void _client_load_string(client_t * c, char * str)
     if(!c || !(c->tx.buffer)) return;
     _check_buffer(c);
     TXINDEX(c) += sprintf(TXHEAD(c),"%s",str);
+}
+
+static int _client_req(client_t * c, char * method, char * path,char * ipaddr, int port, client_rx_callback_t cb)
+{
+    int ret;
+
+    if(!c || !path || !ipaddr) return -1;
+    if(c->transmitting) return -1;
+
+    _client_load_uri(c, method, path);
+    _client_load_boilerplate(c);
+    _client_load_headers(c);
+    _client_load_string(c,CRLF);
+    _client_load_payload(c);
+
+    if(!sock_connected(c->sock)){
+        if(sock_connect(c->sock,ipaddr,port)<0){
+            DBG("%s: Error connecting\n",NAME);
+            return -1;
+        }
+    }
+    c->rx_cb = cb;
+
+    //DBG("REQ: --%s--\n",c->tx.buffer);
+    c->transmitting = true;
+    DBG("%s: Socket %d send %d bytes (x%08X)\n",NAME,c->sock, c->tx.size, (int)(c->tx.buffer));
+    ret = sock_send(c->sock,(uint8_t*)(c->tx.buffer),c->tx.index);
+    if(ret<c->tx.index)
+    {
+        DBG("%s: Only sent %d of %d bytes\n",NAME,ret,c->tx.index);
+    }
+    return ret;
 }
 
 static void _client_buffer_clear(client_buffer_t * b)

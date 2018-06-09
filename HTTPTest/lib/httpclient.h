@@ -65,6 +65,10 @@ bool client_payload_add(client_t * c, char * payload, int size);
 
 int client_getreq(client_t * c, char * path,char * ipaddr, int port, client_rx_callback_t cb);
 
+int client_postreq(client_t * c, char * path,char * ipaddr, int port, client_rx_callback_t cb);
+
+int client_deletereq(client_t * c, char * path,char * ipaddr, int port, client_rx_callback_t cb);
+
 void client_reqcomplete(client_t *c);
 
 void client_end(client_t * c);

@@ -66,7 +66,11 @@ void app_init()
     client_payload_add(m_client,"{\"message\":\"1234\"}",18);
 
     client_getreq(m_client, "/", "127.0.0.1",12345, app_rx);
-
+    client_reqcomplete(m_client);
+    client_postreq(m_client, "/", "127.0.0.1",12345, app_rx);
+    client_reqcomplete(m_client);
+    client_deletereq(m_client, "/", "127.0.0.1",12345, app_rx);
+    client_reqcomplete(m_client);
     DBG("%s: Started\n",NAME);
 	return;
 }
