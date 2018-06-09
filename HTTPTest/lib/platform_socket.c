@@ -38,7 +38,7 @@
 
 // Types and defines
 // ---------------------------------------------------------------------------
-
+#define TLS
 // Local prototypes
 // ---------------------------------------------------------------------------
 
@@ -63,38 +63,66 @@ int sock_new(sock_proto_t proto,socket_rx_callback_t cb)
 	case SOCK_PROTO_TCP: sproto=PROTO_TCP; break;
 	default: return -1;
 	}
+#ifdef TLS
+	return tls_socket_new(cb);
+#else
 	return socket_new(sproto,cb);
+#endif
 }
 
 int sock_connect(int sock, char * ipaddr, uint16_t port)
 {
+#ifdef TLS
+    return tls_socket_connect(sock,ipaddr,port);
+#else
 	return socket_connect(sock,ipaddr,port);
+#endif
 }
 
 bool sock_connected(int sock)
 {
+#ifdef TLS
+    return tls_socket_connected(sock);
+#else
 	return socket_connected(sock);
+#endif
 }
 
 int sock_close(int sock)
 {
+#ifdef TLS
+    return tls_socket_close(sock);
+#else
 	return socket_close(sock);
+#endif
 }
 
 int sock_send(int sock, uint8_t * data, int size)
 {
     DBG("%s: Socket %d send %d bytes (x%08X)\n",NAME,sock, size, (int)data);
+#ifdef TLS
+    return tls_socket_send(sock,data,size);
+#else
 	return socket_send(sock,data,size);
+#endif
 }
 
 int sock_recv(int sock, uint8_t * data, int size)
 {
+#ifdef TLS
+    return tls_socket_recv(sock,data,size);
+#else
 	return socket_recv(sock,data,size);
+#endif
 }
 
 int sock_bytes_available(int sock)
 {
+#ifdef TLS
+    return tls_socket_bytes_available(sock);
+#else
 	return socket_bytes_available(sock);
+#endif
 }
 
 
